@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: coindcx_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: coindcx_admin
+      POSTGRES_PASSWORD: supersecure_db_pass_99
+      POSTGRES_DB: coindcx_intelligence
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coindcx_admin -d coindcx_intelligence"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  analytics_scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: coindcx_scheduler
+    restart: always
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_HOST=postgres_db
+
+volumes:
+  postgres_data:

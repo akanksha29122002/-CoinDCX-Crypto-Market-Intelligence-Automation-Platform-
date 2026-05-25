@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  analytics_scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: coindcx_prod_scheduler
+    restart: unless-stopped
+    user: "1000:1000"  # Enforces execution via non-privileged system profiles
+    mem_limit: 512m     # Caps container memory to prevent host RAM depletion
+    cpus: 0.50          # Caps CPU usage to a maximum of 50% shares
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  superset_dashboard:
+    image: apache/superset:3.0.0
+    container_name: coindcx_prod_superset
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    user: "1000:1000"  # Enforces non-root profile configuration rules
+    mem_limit: 768m     # Standard boundary for Superset data engines
+    cpus: 0.75
+    env_file:
+      - .env
+    volumes:
+      - superset_home:/app/superset_home
+      - ./docker/superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+    environment:
+      - SUPERSET_CONFIG_PATH=/app/pythonpath/superset_config.py
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  superset_home:
